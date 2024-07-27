@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Pandora</title>
+    <link rel="stylesheet" href="/main.css" />
+    <!--<link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/css/autoComplete.min.css"
+    /> -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/css/autoComplete.02.min.css"
+    />
+  </head>
+  <body>
+    <div id="particles-js"></div>
+    <main>
+      <div class="container">
+        <img
+          style="opacity: 75%;"
+          src="/pandora.png"
+        />
+        <hr />
+        <div class="center">
+          <!--<input
+            id="autoComplete"
+            type="search"
+            dir="ltr"
+            spellcheck="false"
+            autocorrect="off"
+            autocomplete="off"
+            autocapitalize="off"
+            maxlength="2048"
+            tabindex="1"
+          />-->
+          <textarea id="autoComplete" rows="4" cols="50" maxlength="2048" tabindex="1" style="clear:both;"></textarea>
+          
+        </div>
+        <div class="center">
+          <button onclick="get_list()">Go!</button>
+        </div>
+      </div>
+    </main>
+
+    <script src="/particles.js"></script>
+    <script src="/autocomplete.js"></script>
+    <script>
+      const get_list = () => {
+        const parts = document.querySelector("#autoComplete").value.split(",");
+        var res = parts.map((part) => {
+          const patt = /(?<=\()(\d*?)(?=\))/g;
+          try{
+            var taxonId = parseInt(part.match(patt)[0])
+            if(taxonId != null){
+              return String(taxonId);
+            }
+          }catch (err) {
+          }
+        });
+        console.log(res.filter((el) => { return el !== undefined; }));
+      }
+
+      
+      // AUTOCOMPLETE
+
+      const autoCompleteJS = new autoComplete({
+        placeHolder: "Sök arter...",
+        data: {
+          src: async (query) => {
+            try {
+              // Fetch Data from external Source
+              const source = await fetch(
+                `https://api.artdatabanken.se/information/v1/speciesdataservice/v1/speciesdata/search?searchString=${query}`,
+                {
+                  method: "GET",
+                  // Request headers
+                  headers: {
+                    "Cache-Control": "no-cache",
+                    "Ocp-Apim-Subscription-Key":
+                      "b0704e7d0747439b974d30fc8d42ddc8",
+                  },
+                }
+              )
+              // Data should be an array of `Objects` or `Strings`
+              const data = await source.json();
+              
+              return data;
+            } catch (error) {
+              return error;
+            }
+          },
+          keys: ["swedishName", "scientificName"],
+        },
+        debounce: 0.5,
+        threshold: 3,
+        resultsList: {
+          element: (list, data) => {
+            if (!data.results.length) {
+              // Create "No Results" message element
+              const message = document.createElement("li");
+              // Add class to the created element
+              message.setAttribute("class", "no_result");
+              // Add message text content
+              message.innerHTML = `<span>Inga resultat för "${data.query}"</span>`;
+              // Append message element to the results list
+              list.prepend(message);
+            }
+          },
+          maxResults: 50,
+          noResults: true,
+        },
+        resultItem: {
+          tag: "li",
+          class: "autoComplete_result",
+          element: (item, data) => {
+              //item.setAttribute("data-parent", "food-item");
+              item.innerHTML = (data.value.swedishName ? `${data.value.swedishName} - <small><i>${data.value.scientificName}</i><small>` : `<i>${data.value.scientificName}<i>`); 
+          },
+          highlight: true,
+        },
+        query: (query) => {
+          // Split query into array
+          const querySplit = query.split(",");
+          // Get last query value index
+          const lastQuery = querySplit.length - 1;
+          // Trim new query
+          const newQuery = querySplit[lastQuery].trim();
+
+          return newQuery;
+        },
+        events: {
+          input: {
+            selection(event) {
+              const feedback = event.detail;
+              const input = autoCompleteJS.input;
+              // Trim selected Value
+              const name = feedback.selection.value.swedishName ? feedback.selection.value.swedishName.trim() : feedback.selection.value.scientificName.trim()
+              const selection = `${name} (${feedback.selection.value.taxonId})`;
+              // Split query into array and trim each value
+              const query = input.value.split(",").map((item) => item.trim());
+              // Remove last query
+              query.pop();
+              // Add selected value
+              query.push(selection);
+              // Replace Input value with the new query
+              input.value = query.join(", ") + ", ";
+            },
+          },
+        },
+      });
+
+      // COOL STUFF
+      particlesJS("particles-js", {
+        particles: {
+          number: { value: 160, density: { enable: true, value_area: 800 } },
+          color: { value: "#ffffff" },
+          shape: {
+            type: "circle",
+            stroke: { width: 0, color: "#000000" },
+          },
+          opacity: {
+            value: 1,
+            random: true,
+            anim: { enable: true, speed: 1, opacity_min: 0, sync: false },
+          },
+          size: {
+            value: 3,
+            random: true,
+            anim: { enable: false, speed: 4, size_min: 0.3, sync: false },
+          },
+          line_linked: {
+            enable: false,
+            distance: 150,
+            color: "#ffffff",
+            opacity: 0.4,
+            width: 1,
+          },
+          move: {
+            enable: true,
+            speed: 1,
+            direction: "bottom-right",
+            random: true,
+            straight: false,
+            out_mode: "out",
+            bounce: false,
+            attract: { enable: false, rotateX: 600, rotateY: 600 },
+          },
+        },
+        interactivity: {
+          detect_on: "window",
+          events: {
+            onhover: { enable: true, mode: "bubble" },
+            onclick: { enable: true, mode: "repulse" },
+            resize: true,
+          },
+          modes: {
+            grab: { distance: 400, line_linked: { opacity: 1 } },
+            bubble: {
+              distance: 250,
+              size: 15.982994094283706,
+              duration: 3.8359185826280893,
+              opacity: 0.1198724557071278,
+              speed: 3,
+            },
+            repulse: { distance: 400, duration: 1.4 },
+            push: { particles_nb: 4 },
+            remove: { particles_nb: 2 },
+          },
+        },
+        retina_detect: true,
+      });
+    </script>
+  </body>
+</html>
